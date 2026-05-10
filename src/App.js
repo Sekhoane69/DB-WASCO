@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 import './App.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5001';
@@ -1761,24 +1762,35 @@ export default function App() {
                       <div className="content-grid">
                         <div className="panel">
                           <h3 className="panel-title">Revenue by Quarter</h3>
-                          <div className="chart-container">
-                            {quarterlyRevenue.map((q, i) => (
-                              <div className="chart-row" key={i}>
-                                <span className="chart-label">{q.label}</span>
-                                <div className="chart-bar"><div className="chart-fill" style={{ width: `${(q.val / 2500) * 100}%`, background: '#185FA5' }}>M {q.val.toLocaleString()}</div></div>
-                              </div>
-                            ))}
+                          <div className="chart-container" style={{ height: '250px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={quarterlyRevenue} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" />
+                                <YAxis dataKey="label" type="category" width={50} />
+                                <Tooltip formatter={(value) => `M ${value.toLocaleString()}`} />
+                                <Bar dataKey="val" fill="#185FA5" radius={[0, 4, 4, 0]} name="Revenue" />
+                              </BarChart>
+                            </ResponsiveContainer>
                           </div>
                         </div>
                         <div className="panel">
                           <h3 className="panel-title">Bill Status Breakdown</h3>
-                          {billBreakdown.map((b, i) => (
-                            <div className="rate-row" key={i}>
-                              <span>{b.status}</span>
-                              <div className="progress-bar"><div className="progress-fill" style={{ width: `${b.pct}%`, background: b.color }}></div></div>
-                              <span>{b.pct}%</span>
-                            </div>
-                          ))}
+                          <div className="chart-container" style={{ height: '250px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={billBreakdown} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" domain={[0, 100]} />
+                                <YAxis dataKey="status" type="category" width={60} />
+                                <Tooltip formatter={(value) => `${value}%`} />
+                                <Bar dataKey="pct" radius={[0, 4, 4, 0]} name="Percentage">
+                                  {billBreakdown.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
                       </div>
                     </>
@@ -1787,21 +1799,16 @@ export default function App() {
                   {currentPage === 'districts' && (
                     <div className="panel">
                       <h3 className="panel-title">District Performance</h3>
-                      <div className="district-list">
-                        {(analytics?.districts || []).map((d, i) => {
-                          const districtsArray = analytics?.districts || [];
-                          const maxVal = Math.max(...districtsArray.map(x => parseFloat(x.total_balance || 0)), 1);
-                          const pct = Math.round((parseFloat(d.total_balance || 0) / maxVal) * 100);
-                          return (
-                            <div className="district-item" key={i}>
-                              <span className="district-name">{d.district}</span>
-                              <div className="district-bar-container">
-                                <div className="district-bar"><div className="district-fill" style={{ width: `${pct}%` }}></div></div>
-                              </div>
-                              <span className="district-amount">M {parseFloat(d.total_balance || 0).toLocaleString()}</span>
-                            </div>
-                          );
-                        })}
+                      <div className="chart-container" style={{ height: '350px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={(analytics?.districts || []).map(d => ({ name: d.district, balance: parseFloat(d.total_balance || 0) }))} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => `M ${value.toLocaleString()}`} />
+                            <Bar dataKey="balance" fill="#2582d4" radius={[4, 4, 0, 0]} name="Total Balance" />
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
                     </div>
                   )}
