@@ -379,18 +379,17 @@ app.get("/api/rates", (req, res) => {
 /* 🔹 ADD WATER USAGE (MySQL) */
 app.post("/api/usage", (req, res) => {
     const { account_id, month, meter_reading_previous, meter_reading_current } = req.body;
-    const consumption_m3 = parseFloat(meter_reading_current) - parseFloat(meter_reading_previous);
 
     const sql = `
-        INSERT INTO WaterUsage (account_id, month, meter_reading_previous, meter_reading_current, consumption_m3)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO WaterUsage (account_id, month, meter_reading_previous, meter_reading_current)
+        VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
             meter_reading_previous = ?, 
-            meter_reading_current = ?, 
-            consumption_m3 = ?
+            meter_reading_current = ?
     `;
 
-    db.query(sql, [account_id, month, meter_reading_previous, meter_reading_current, consumption_m3, meter_reading_previous, meter_reading_current, consumption_m3], (err, result) => {
+    const consumption_m3 = parseFloat(meter_reading_current) - parseFloat(meter_reading_previous);
+    db.query(sql, [account_id, month, meter_reading_previous, meter_reading_current, meter_reading_previous, meter_reading_current], (err, result) => {
         if (err) return res.status(500).json(err);
         res.json({ message: "Usage recorded successfully", consumption: consumption_m3 });
     });
