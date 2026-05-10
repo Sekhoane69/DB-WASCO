@@ -1753,6 +1753,8 @@ export default function App() {
                       <div className="stats-grid">
                         <div className="stat-card"><div className="stat-label">Total Customers</div><div className="stat-value">{analytics?.stats?.total_customers || 0}</div></div>
                         <div className="stat-card"><div className="stat-label">Monthly Revenue</div><div className="stat-value">M {analytics?.stats?.monthly_revenue?.toLocaleString() || 0}</div></div>
+                        <div className="stat-card"><div className="stat-label">Quarterly Revenue</div><div className="stat-value">M {analytics?.stats?.quarterly_revenue?.toLocaleString() || 0}</div></div>
+                        <div className="stat-card"><div className="stat-label">Yearly Revenue</div><div className="stat-value">M {analytics?.stats?.yearly_revenue?.toLocaleString() || 0}</div></div>
                         <div className="stat-card"><div className="stat-label">Average Bill</div><div className="stat-value">M {Math.round(analytics?.stats?.avg_bill || 0)}</div></div>
                         <div className="stat-card"><div className="stat-label">Collection Rate</div><div className="stat-value">{Math.round(analytics?.stats?.collection_rate || 0)}%</div></div>
                       </div>

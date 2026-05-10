@@ -410,7 +410,9 @@ app.get("/api/analytics", (req, res) => {
     const sqlStats = `
       SELECT 
         (SELECT COUNT(*) FROM Customers) as total_customers,
-        (SELECT SUM(amount) FROM Bills WHERE month LIKE '%2025%') as monthly_revenue,
+        (SELECT SUM(amount) FROM Bills WHERE month LIKE '%April 2025%') as monthly_revenue,
+        (SELECT SUM(amount) FROM Bills WHERE month IN ('February 2025', 'March 2025', 'April 2025')) as quarterly_revenue,
+        (SELECT SUM(amount) FROM Bills WHERE month LIKE '%2025%') as yearly_revenue,
         (SELECT AVG(amount) FROM Bills) as avg_bill,
         (SELECT SUM(amount) FROM Bills WHERE status='Paid') / (SELECT SUM(amount) FROM Bills) * 100 as collection_rate
     `;
