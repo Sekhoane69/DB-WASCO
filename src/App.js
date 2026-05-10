@@ -439,6 +439,9 @@ export default function App() {
         showToast(data.message || `Bill generated for ${selectedCustomer.full_name}`);
         setShowBillModal(false);
         fetchAllBills();
+        fetchCustomers();
+        // Refresh customer's own bills so payment page sees the new bill
+        if (user?.account_id) fetchBills(user.account_id);
       } else {
         showToast(`Error: ${data.message || "Failed to generate bill"}`);
       }
@@ -483,6 +486,8 @@ export default function App() {
         // 3. Refresh Data
         fetchCustomers();
         fetchAllBills();
+        // Refresh customer's own bills so payment page sees the new bill
+        if (user?.account_id) fetchBills(user.account_id);
       } else {
         showToast(`Error: ${data.message || "Failed to save usage"}`);
       }
