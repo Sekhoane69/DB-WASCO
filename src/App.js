@@ -351,7 +351,7 @@ export default function App() {
   const viewReceipt = (bill) => {
     const receipt = {
       transactionId: 'WREC-' + Math.floor(Math.random() * 1000000) + '-' + bill.bill_id,
-      amount: bill.amount,
+      amount: bill.status === 'Paid' ? (bill.usage_m3 * 14.50) : (parseFloat(bill.amount) || 0), // Fallback to estimated total if paid
       date: new Date().toLocaleDateString(),
       billId: bill.bill_id,
       customerName: user.name,
