@@ -30,9 +30,16 @@ db.connect(err => {
     if (err) throw err;
     console.log("MySQL Connected");
     // Auto-migrate: add missing columns if they don't exist
-    db.query("ALTER TABLE Customers ADD COLUMN IF NOT EXISTS balance DECIMAL(10,2) DEFAULT 0.00", () => { });
-    db.query("ALTER TABLE Customers ADD COLUMN IF NOT EXISTS customer_type VARCHAR(50) DEFAULT 'Domestic'", () => { });
-    db.query("ALTER TABLE Payments ADD COLUMN IF NOT EXISTS credit_balance DECIMAL(10,2) DEFAULT 0.00", () => { });
+    db.query("ALTER TABLE Customers ADD COLUMN balance DECIMAL(10,2) DEFAULT 0.00", (err) => { if (err && !err.message.includes('duplicate')) console.log("Balance column check complete"); });
+    db.query("ALTER TABLE Customers ADD COLUMN customer_type VARCHAR(50) DEFAULT 'Domestic'", (err) => { if (err && !err.message.includes('duplicate')) console.log("Customer Type column check complete"); });
+    db.query("ALTER TABLE Payments ADD COLUMN credit_balance DECIMAL(10,2) DEFAULT 0.00", (err) => { 
+        if (err) {
+            if (err.message.includes('duplicate')) console.log("Payments: credit_balance column already exists.");
+            else console.error("FAILED to add credit_balance column:", err.message);
+        } else {
+            console.log("SUCCESS: credit_balance column added to Payments table.");
+        }
+    });
     
     // Create Views automatically for the system to use
     db.query(`CREATE OR REPLACE VIEW AllBillsView AS SELECT b.bill_id, b.account_id, c.full_name as name, b.month, b.amount, b.status FROM Bills b JOIN Customers c ON b.account_id = c.account_id;`, () => { });
