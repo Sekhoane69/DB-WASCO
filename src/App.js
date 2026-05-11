@@ -300,6 +300,10 @@ export default function App() {
 
   const processPayment = async () => {
     if (!currentBill) return;
+    if (!payAmount || parseFloat(payAmount) <= 0) {
+      alert("Please enter a valid payment amount greater than zero.");
+      return;
+    }
     try {
       const res = await fetch(API_BASE + '/api/pay', {
         method: 'POST',

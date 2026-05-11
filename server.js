@@ -594,33 +594,47 @@ app.post("/api/pay", async (req, res) => {
     const payAmount = parseFloat(amount);
     const methodStr = payment_method || 'Card';
 
+    // 1. Validation: Prevent zero or negative payments
+    if (isNaN(payAmount) || payAmount <= 0) {
+        return res.status(400).json({ error: "Payment amount must be a positive number greater than zero." });
+    }
+
+    const conn = db.promise();
     try {
-        // 1. Fetch current bill state
-        const [billRows] = await db.promise().query("SELECT amount, account_id FROM Bills WHERE bill_id = ?", [bill_id]);
-        if (billRows.length > 0) {
-            const currentAmount = parseFloat(billRows[0].amount);
-            const accId = account_id || billRows[0].account_id;
+        await conn.query("START TRANSACTION");
 
-            // Fetch current customer balance
-            const [custRows] = await db.promise().query("SELECT balance FROM Customers WHERE account_id = ?", [accId]);
-            const currentCustBalance = custRows.length > 0 ? parseFloat(custRows[0].balance) : 0;
-            const newCustBalance = currentCustBalance - payAmount;
+        // 2. Fetch current bill state
+        const [billRows] = await conn.query("SELECT amount, account_id FROM Bills WHERE bill_id = ? FOR UPDATE", [bill_id]);
+        if (billRows.length === 0) {
+            await conn.query("ROLLBACK");
+            return res.status(404).json({ error: "Bill not found" });
+        }
 
-            // 2. Record payment in MySQL with credit_balance
-            const sqlPay = "INSERT INTO Payments (bill_id, amount, payment_method, credit_balance) VALUES (?, ?, ?, ?)";
-            await db.promise().query(sqlPay, [bill_id, payAmount, methodStr, newCustBalance]);
+        const currentAmount = parseFloat(billRows[0].amount);
+        const accId = account_id || billRows[0].account_id;
 
-            // 3. Update Bill (subtract amount, check if fully paid)
-            const newAmount = Math.max(0, currentAmount - payAmount);
-            const newStatus = newAmount < 0.01 ? 'Paid' : 'Pending';
+        // 3. Fetch current customer balance
+        const [custRows] = await conn.query("SELECT balance FROM Customers WHERE account_id = ? FOR UPDATE", [accId]);
+        const currentCustBalance = custRows.length > 0 ? parseFloat(custRows[0].balance) : 0;
+        const newCustBalance = currentCustBalance - payAmount;
 
-            await db.promise().query("UPDATE Bills SET amount = ?, status = ? WHERE bill_id = ?", [newAmount, newStatus, bill_id]);
+        // 4. Record payment in MySQL
+        const sqlPay = "INSERT INTO Payments (bill_id, amount, payment_method, credit_balance) VALUES (?, ?, ?, ?)";
+        await conn.query(sqlPay, [bill_id, payAmount, methodStr, newCustBalance]);
 
-            // 4. Update Customer total balance
-            await db.promise().query("UPDATE Customers SET balance = ? WHERE account_id = ?", [newCustBalance, accId]);
+        // 5. Update Bill (subtract amount, check if fully paid)
+        const newAmount = Math.max(0, currentAmount - payAmount);
+        const newStatus = newAmount < 0.01 ? 'Paid' : 'Pending';
+        await conn.query("UPDATE Bills SET amount = ?, status = ? WHERE bill_id = ?", [newAmount, newStatus, bill_id]);
 
-            // 5. Firebase notification
-            if (firestore) {
+        // 6. Update Customer total balance
+        await conn.query("UPDATE Customers SET balance = ? WHERE account_id = ?", [newCustBalance, accId]);
+
+        await conn.query("COMMIT");
+
+        // 7. Firebase notification (Outside transaction for performance)
+        if (firestore) {
+            try {
                 await firestore.collection("notifications").add({
                     account_id: accId,
                     message: `Payment of M ${payAmount.toLocaleString()} successful. ${newAmount < 0.01 ? 'Bill fully paid.' : 'Remaining: M ' + newAmount.toLocaleString()}`,
@@ -628,20 +642,22 @@ app.post("/api/pay", async (req, res) => {
                     created_at: new Date().toISOString()
                 });
 
-                // Also notify Admins
                 await firestore.collection("notifications").add({
                     account_id: "System",
                     message: `PAYMENT: Customer ${accId} paid M ${payAmount.toLocaleString()} for bill #${bill_id}.`,
                     type: 'payment',
                     created_at: new Date().toISOString()
                 });
+            } catch (fErr) {
+                console.error("Firebase notification failed:", fErr);
             }
         }
 
-        res.json({ success: true, message: "Payment successful" });
-    } catch (err) {
-        console.error("Payment Error:", err);
-        res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, message: "Payment processed successfully", newBalance: newCustBalance });
+    } catch (error) {
+        await conn.query("ROLLBACK");
+        console.error("Payment transaction failed:", error);
+        res.status(500).json({ error: "Transaction failed. No money was deducted." });
     }
 });
 
