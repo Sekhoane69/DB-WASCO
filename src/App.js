@@ -315,7 +315,12 @@ export default function App() {
           payment_method: paymentMethod
         })
       });
-      await res.json();
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert("Payment Failed: " + (data.error || "Please try again."));
+        return;
+      }
 
       const newReceipt = {
         transactionId: 'WREC-' + Math.floor(Math.random() * 1000000),
