@@ -657,7 +657,7 @@ app.post("/api/pay", async (req, res) => {
     } catch (error) {
         await conn.query("ROLLBACK");
         console.error("Payment transaction failed:", error);
-        res.status(500).json({ error: "Transaction failed. No money was deducted." });
+        res.status(500).json({ error: "Transaction failed: " + error.message });
     }
 });
 
